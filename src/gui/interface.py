@@ -1,6 +1,8 @@
+import os
+
 from PyQt6.QtWidgets import (
     QWidget, QPushButton, QVBoxLayout,
-    QHBoxLayout, QLabel, QSlider, QStackedWidget, QGridLayout, QSizePolicy, QTabWidget, QComboBox, QFileDialog
+    QHBoxLayout, QLabel, QSlider, QStackedWidget, QGridLayout, QSizePolicy, QTabWidget, QComboBox, QFileDialog, QCheckBox
 )
 from PyQt6.QtCore import Qt, QTimer
 
@@ -20,6 +22,7 @@ class GUI(QWidget):
         self.default_style = load_stylesheet("./src/gui/style_files/default_button.qss")
         self.clicked_style = load_stylesheet("./src/gui/style_files/clicked_button.qss")
         self.clicked_style_red = load_stylesheet("./src/gui/style_files/clicked_red_button.qss")
+        self.switch_style = load_stylesheet('./src/gui/style_files/switch_style.qss')
         self.default_color = "lightgray"
         self.clicked_color = "lightgreen"
         
@@ -126,19 +129,38 @@ class GUI(QWidget):
         
         
         # Control panel (Play/Pause,stop (greyed out if audio device is used as input), outputdevice , graphics?)
+        control_panel_layout_L = QVBoxLayout()
+        control_panel_layout_R = QVBoxLayout()
+        control_panel_layout_top = QHBoxLayout()
+        control_panel_layout_bottom = QHBoxLayout()
         control_panel_layout = QHBoxLayout()
+
         
         # Play/Pause
         self.play_pause_button = QPushButton("Play/Pause")
         self.play_pause_button.clicked.connect(self.on_play_clicked)
-        control_panel_layout.addWidget(self.play_pause_button)
+        control_panel_layout_top.addWidget(self.play_pause_button)
        
         
         # Stop button
         self.stop_button = QPushButton("Stop")
         self.stop_button.clicked.connect(self.on_stop_clicked)
-        control_panel_layout.addWidget(self.stop_button)
+        control_panel_layout_top.addWidget(self.stop_button)
         
+        
+        # Active filtering switch
+        filter_active_layout = QLabel("Filtering Active:")
+        control_panel_layout_bottom.addWidget(filter_active_layout)
+        
+        
+        active_switch_control = QCheckBox()
+        active_switch_control.clicked.connect(self.filter_active)
+        control_panel_layout_bottom.addWidget(active_switch_control)
+        active_switch_control.setStyleSheet(self.switch_style)
+    
+        # Add control panel layouts
+        control_panel_layout_L.addLayout(control_panel_layout_top)
+        control_panel_layout_L.addLayout(control_panel_layout_bottom)
         
         # Output device
         output_device_layout = QVBoxLayout()
@@ -154,7 +176,10 @@ class GUI(QWidget):
         output_device_layout.addWidget(self.output_device_dropdown)
         output_device_layout.addWidget(self.refresh_audiodevice_btn)
         
-        control_panel_layout.addLayout(output_device_layout)
+        control_panel_layout_R.addLayout(output_device_layout)
+        
+        control_panel_layout.addLayout(control_panel_layout_L)
+        control_panel_layout.addLayout(control_panel_layout_R)
         
         
         # ==== Compile all layouts ====
@@ -167,6 +192,14 @@ class GUI(QWidget):
         main_layout.addLayout(control_panel_layout)
         main_layout.addLayout(volume_mute_layout)
         
+        # Create and add button that selects default mono filter and mono audio for testing
+        mono_filter_path = '/Users/jamesbrookspark/Documents/04_Repositories/UnPaWOAC/demo_filters/filters/highpass_impulse_response.wav'
+        stereo_filter_path = '/Users/jamesbrookspark/Documents/04_Repositories/UnPaWOAC/demo_filters/filters/lowpasshighpass_impulse_response.wav'
+        mono_audio_path = '/Users/jamesbrookspark/OfflineFiles/01_Audio/01_Music/01_Mono/Come Fly With Me_monoleft.wav'
+        stereo_audio_path = '/Users/jamesbrookspark/OfflineFiles/01_Audio/01_Music/02_Stereo/Jazz At The Pawnshop/03HighLife.wav'
+        self.default_filter_button = QPushButton("Load default filter and test audio")
+        self.default_filter_button.clicked.connect(lambda: self.load_default_filter_content(stereo_filter_path, stereo_audio_path))
+        main_layout.addWidget(self.default_filter_button)
         
         # Test settings:
         self.AE.input_file_path = '/Users/jamesbrookspark/Nextcloud/PhD/Working/Audio/Music/TestTracks-Original/Come Fly With Me.wav'
@@ -207,13 +240,18 @@ class GUI(QWidget):
             if variable == 'input wavfile':
                 self.AE.input_file_path = file_path
                 print(self.AE.input_file_path)
-            elif variable == 'sofa file':
+            elif variable == 'sofa_file':
+                self.AE.filter_type = variable
                 self.loaded_sofa_path = file_path
                 print(self.loaded_sofa_path)
+                self.AE.load_filter(variable, self.loaded_sofa_path)
             elif variable == 'mono_filter':
+                self.AE.filter_type = variable
                 self.mono_wav_filter = file_path
                 print(self.mono_wav_filter)
+                self.AE.load_filter(variable, self.mono_wav_filter)
             elif variable == 'stereo_filter':
+                self.AE.filter_type = variable
                 if n == 0:
                     self.stereo_wav_filter_0 = file_path
                     print(self.stereo_wav_filter_0)
@@ -223,8 +261,11 @@ class GUI(QWidget):
                 else:
                     self.stereo_wav_filter = file_path
                     print(self.stereo_wav_filter)
+                self.AE.load_filter(variable, self.stereo_wav_filter)
+                    
         else:
             print("No file was selected.")
+            
             
     def populate_output_devices(self,devices = None):
         self.output_device_dropdown.clear()
@@ -258,6 +299,15 @@ class GUI(QWidget):
         
     def on_stop_clicked(self):
         self.AE.stop_clicked()
+        
+    def filter_active(self, state):
+        self.AE.filter_bool = True if state else False
+        
+    def load_default_filter_content(self, filter_path, audio_path):
+        self.AE.filter_type = "stereo_filter"
+        self.stereo_wav_filter = filter_path
+        self.AE.input_file_path = audio_path
+        self.AE.load_filter(self.AE.filter_type, self.stereo_wav_filter)
 
         
         
