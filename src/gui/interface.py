@@ -1,10 +1,8 @@
-import os
-
 from PyQt6.QtWidgets import (
     QWidget, QPushButton, QVBoxLayout,
-    QHBoxLayout, QLabel, QSlider, QStackedWidget, QGridLayout, QSizePolicy, QTabWidget, QComboBox, QFileDialog, QCheckBox
+    QHBoxLayout, QLabel, QSlider, QTabWidget, QComboBox, QFileDialog, QCheckBox
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt
 
 from gui.interface_helper import load_stylesheet
 from AudioEngine.audio_engine import AudioEngine
